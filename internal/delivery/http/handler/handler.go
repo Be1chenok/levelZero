@@ -25,8 +25,10 @@ func New(conf *config.Config, service *appService.Service) *Handler {
 	}
 }
 
-func (h *Handler) InitRoutes() http.Handler {
+func (h Handler) InitRoutes() http.Handler {
 	router := mux.NewRouter()
+
+	router.HandleFunc("/order/{uid:[a-zA-Z0-9]+}", h.FindOrderByUID).Methods("GET")
 
 	return router
 }

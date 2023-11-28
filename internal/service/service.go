@@ -10,6 +10,6 @@ type Service struct {
 
 func New(repo *repository.Repository) *Service {
 	return &Service{
-		Order: NewOrder(repo),
+		Order: NewOrder(repo.PostgresOrder),
 	}
 }

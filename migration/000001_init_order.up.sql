@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS orders(
     delivery_service VARCHAR(64),
     shardkey VARCHAR(64),
     sm_id INT,
-    date_created TIMESTAMP,
+    date_created VARCHAR(64),
     off_shard VARCHAR(64)
 );
 

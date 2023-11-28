@@ -6,9 +6,11 @@ import (
 )
 
 type Repository struct {
-	postgres.Order
+	PostgresOrder postgres.Order
 }
 
 func New(db *sqlx.DB) *Repository {
-	return &Repository{}
+	return &Repository{
+		PostgresOrder: postgres.NewOrderRepo(db),
+	}
 }

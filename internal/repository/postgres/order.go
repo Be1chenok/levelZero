@@ -38,8 +38,9 @@ func (o order) FindOrderByUID(ctx context.Context, orderUID string) (domain.Orde
 		internal_signature,
 		customer_id,
 		delivery_service,
-		shardkey, o.sm_id,
-		data_created,
+		shardkey,
+		sm_id,
+		date_created,
 		off_shard
 		FROM orders
 		WHERE order_uid=$1`,
@@ -56,7 +57,7 @@ func (o order) FindOrderByUID(ctx context.Context, orderUID string) (domain.Orde
 		&order.DateCreated,
 		&order.OofShard,
 	); err != nil {
-		return domain.Order{}, fmt.Errorf("failed to scan row: %w", err)
+		return domain.Order{}, domain.NothingFound
 	}
 
 	return order, nil
@@ -86,7 +87,7 @@ func (o order) FindDeliveryByOrderUID(ctx context.Context, orderUID string) (dom
 		&delivery.Region,
 		&delivery.Email,
 	); err != nil {
-		return domain.Delivery{}, fmt.Errorf("failed to scan row: %w", err)
+		return domain.Delivery{}, domain.NothingFound
 	}
 	return delivery, nil
 }
@@ -121,7 +122,7 @@ func (o order) FindPaymentByOrderUID(ctx context.Context, orderUID string) (doma
 		&payment.GoodsTotal,
 		&payment.CustomFee,
 	); err != nil {
-		return domain.Payment{}, fmt.Errorf("failed to scan row: %w", err)
+		return domain.Payment{}, domain.NothingFound
 	}
 
 	return payment, nil
@@ -167,7 +168,7 @@ func (o order) FindItemsByOrderUID(ctx context.Context, orderUID string) ([]doma
 			&item.NmID,
 			&item.Brand,
 			&item.Status); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, domain.NothingFound
 		}
 		items = append(items, item)
 	}

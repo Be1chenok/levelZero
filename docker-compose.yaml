@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     volumes:
-      - .:bin
+      - .:/bin
     command: go run main.go
     ports:
       -  ${SERVER_PORT}:${SERVER_PORT}

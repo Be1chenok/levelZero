@@ -9,4 +9,4 @@ migrate-up:
 	migrate -path ./migration -database ${DATABASE_URL} up
 
 migrate-down:
-	echo y | migrate -path ./Migration -database ${DATABASE_URL} down
+	echo y | migrate -path ./migration -database ${DATABASE_URL} down
