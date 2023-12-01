@@ -1,15 +1,15 @@
 package postgres
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/Be1chenok/levelZero/internal/config"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-func New(conf *config.Config) (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=%v",
+func New(conf *config.Config) (*sql.DB, error) {
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=%v",
 		conf.Postgres.Host,
 		conf.Postgres.Port,
 		conf.Postgres.Username,

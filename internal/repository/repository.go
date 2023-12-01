@@ -1,16 +1,21 @@
 package repository
 
 import (
+	"database/sql"
+
+	"github.com/Be1chenok/levelZero/internal/repository/cache"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
-	"github.com/jmoiron/sqlx"
 )
 
 type Repository struct {
 	PostgresOrder postgres.Order
+	CacheOrder    cache.Cache
 }
 
-func New(db *sqlx.DB) *Repository {
+func New(db *sql.DB) *Repository {
+	postgresOrder := postgres.NewOrderRepo(db)
 	return &Repository{
-		PostgresOrder: postgres.NewOrderRepo(db),
+		PostgresOrder: postgresOrder,
+		CacheOrder:    cache.New(),
 	}
 }

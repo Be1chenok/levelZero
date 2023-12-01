@@ -23,13 +23,17 @@ func Run() {
 
 	postgres, err := postgres.New(conf)
 	if err != nil {
-		log.Fatalf("failed to connect db: %v", err)
+		log.Fatalf("failed to connect database: %v", err)
 	}
 
 	repository := appRepository.New(postgres)
 	service := appService.New(repository)
 	handler := appHandler.New(conf, service)
 	server := appServer.New(conf, handler.InitRoutes())
+
+	if err := service.LoadToCache(); err != nil {
+		log.Fatalf("failed to load cache: %v", err)
+	}
 
 	go func() {
 		if err := server.Start(); err != nil {
@@ -50,6 +54,6 @@ func Run() {
 	}
 
 	if err := postgres.Close(); err != nil {
-		log.Fatalf("failed to close postgres: %v", err)
+		log.Fatalf("failed to close database connection: %v", err)
 	}
 }

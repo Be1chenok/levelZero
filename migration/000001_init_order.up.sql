@@ -9,19 +9,19 @@ CREATE TABLE IF NOT EXISTS orders(
     shardkey VARCHAR(64),
     sm_id INT,
     date_created VARCHAR(64),
-    off_shard VARCHAR(64)
+    oof_shard VARCHAR(64)
 );
 
 CREATE TABLE IF NOT EXISTS delivery(
-      order_uid VARCHAR(64) PRIMARY KEY,
-  name VARCHAR(64),
-  phone VARCHAR(16),
-  zip VARCHAR(255),
-  city VARCHAR(255),
-  address VARCHAR(255),
-  region VARCHAR(255),
-  email VARCHAR(255),
-  FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
+    order_uid VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(64),
+    phone VARCHAR(16),
+    zip VARCHAR(255),
+    city VARCHAR(255),
+    address VARCHAR(255),
+    region VARCHAR(255),
+    email VARCHAR(255),
+    FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
 );
 
 CREATE TABLE IF NOT EXISTS payment(
