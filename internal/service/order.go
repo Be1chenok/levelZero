@@ -3,28 +3,48 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/Be1chenok/levelZero/internal/domain"
 	"github.com/Be1chenok/levelZero/internal/repository/cache"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
+	"github.com/Be1chenok/levelZero/internal/repository/subscriber"
 )
 
 type Order interface {
 	FindByUID(ctx context.Context, orderUID string) (domain.Order, error)
+	UnSubscribeToChannel() error
+	SubscribeToChannel() error
 	LoadToCache() error
 }
 
 type order struct {
 	postgresOrder postgres.Order
 	cacheOrder    cache.Cache
+	subscriber    subscriber.Subscriber
 }
 
-func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache) Order {
+func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache, subscriber subscriber.Subscriber) Order {
 	return &order{
 		postgresOrder: postgresOrder,
 		cacheOrder:    cacheOrder,
+		subscriber:    subscriber,
 	}
+}
+
+func (o order) SubscribeToChannel() error {
+	if err := o.subscriber.Subscribe(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o order) UnSubscribeToChannel() error {
+	if err := o.subscriber.UnSubscribe(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o order) LoadToCache() error {
@@ -34,7 +54,7 @@ func (o order) LoadToCache() error {
 	}
 	if len(orders) != 0 {
 		for i := range orders {
-			if err := o.cacheOrder.Set(orders[i].OrderUID, orders[i], 10*time.Minute); err != nil {
+			if err := o.cacheOrder.Set(orders[i].OrderUID, orders[i]); err != nil {
 				return fmt.Errorf("filed to set data: %w", err)
 			}
 		}

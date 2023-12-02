@@ -18,13 +18,13 @@ type Order struct {
 }
 
 type Delivery struct {
-	Name   string `json:"name"`
-	Phone  string `json:"phone"`
-	Zip    string `json:"zip"`
-	City   string `json:"city"`
-	Addres string `json:"addres"`
-	Region string `json:"region"`
-	Email  string `json:"email"`
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+	Zip     string `json:"zip"`
+	City    string `json:"city"`
+	Address string `json:"address"`
+	Region  string `json:"region"`
+	Email   string `json:"email"`
 }
 
 type Payment struct {

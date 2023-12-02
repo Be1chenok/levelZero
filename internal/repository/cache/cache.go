@@ -3,62 +3,45 @@ package cache
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/Be1chenok/levelZero/internal/domain"
 )
 
 type Cache interface {
 	Get(key string) (domain.Order, bool)
-	Set(key string, value domain.Order, expiration time.Duration) error
+	Set(key string, value domain.Order) error
 }
 
 type cache struct {
 	mutex sync.RWMutex
-	data  map[string]cacheEntry
-}
-
-type cacheEntry struct {
-	Value      domain.Order
-	Expiration time.Time
+	data  map[string]domain.Order
 }
 
 func New() Cache {
 	return &cache{
-		data: make(map[string]cacheEntry),
+		data: make(map[string]domain.Order),
 	}
 }
 
 func (c *cache) Get(key string) (domain.Order, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	entry, ok := c.data[key]
+	value, ok := c.data[key]
 	if !ok {
-		return entry.Value, false
+		return value, false
 	}
 
-	if time.Now().After(entry.Expiration) {
-		c.mutex.Lock()
-		delete(c.data, key)
-		return entry.Value, false
-	}
-
-	return entry.Value, true
+	return value, true
 }
 
-func (c *cache) Set(key string, value domain.Order, expiration time.Duration) error {
+func (c *cache) Set(key string, value domain.Order) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if entry, ok := c.data[key]; ok == true {
-		if !time.Now().After(entry.Expiration) {
-			return fmt.Errorf("already exixts")
-		}
+	if _, ok := c.data[key]; ok == true {
+		return fmt.Errorf("already exixts")
 	}
 
-	c.data[key] = cacheEntry{
-		Value:      value,
-		Expiration: time.Now().Add(expiration),
-	}
+	c.data[key] = value
 	return nil
 }

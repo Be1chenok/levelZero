@@ -76,13 +76,13 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		address,
 		region,
 		email
-	) values ($1, $2, $3, $4, $6, $7, $8)`,
+		) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		order.OrderUID,
 		order.Delivery.Name,
 		order.Delivery.Phone,
 		order.Delivery.Zip,
 		order.Delivery.City,
-		order.Delivery.Addres,
+		order.Delivery.Address,
 		order.Delivery.Region,
 		order.Delivery.Email,
 	); err != nil {
@@ -101,10 +101,10 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		amount,
 		payment_dt,
 		bank,
-		delyvery_cost,
+		delivery_cost,
 		goods_total,
 		custom_fee
-	) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		order.OrderUID,
 		order.Payment.Transaction,
 		order.Payment.RequestID,
@@ -296,7 +296,7 @@ func (o order) FindDeliveryByOrderUID(ctx context.Context, orderUID string) (dom
 		&delivery.Phone,
 		&delivery.Zip,
 		&delivery.City,
-		&delivery.Addres,
+		&delivery.Address,
 		&delivery.Region,
 		&delivery.Email,
 	); err != nil {

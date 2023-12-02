@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order</title>
+</head>
+<body>
+
+    <h2>Search by Order UID</h2>
+
+    <form action="/search" method="get">
+        <label for="orderUID"></label>
+        <input type="text" id="orderUID" name="orderUID" required>
+        <button type="submit">Search</button>
+    </form>
+
+    <h2>Order</h2>
+
+    <div>
+        <strong>Order UID:</strong> {{.OrderUID}}<br>
+        <strong>Track Number:</strong> {{.TrackNumber}}<br>
+        <strong>Entry:</strong> {{.Entry}}<br>
+        <strong>Locale:</strong> {{.Locale}}<br>
+        <strong>Internal Signature:</strong> {{.InternalSignature}}<br>
+        <strong>Customer ID:</strong> {{.CustomerID}}<br>
+        <strong>Delivery Service:</strong> {{.DeliveryService}}<br>
+        <strong>Shard Key:</strong> {{.ShardKey}}<br>
+        <strong>SmID:</strong> {{.SmID}}<br>
+        <strong>Date Created:</strong> {{.DateCreated}}<br>
+        <strong>Oof Shard:</strong> {{.OofShard}}<br>
+
+        <h2>Delivery</h2>
+        <strong>Name:</strong> {{.Delivery.Name}}<br>
+        <strong>Phone:</strong> {{.Delivery.Phone}}<br>
+        <strong>Zip:</strong> {{.Delivery.Zip}}<br>
+        <strong>City:</strong> {{.Delivery.City}}<br>
+        <strong>Address:</strong> {{.Delivery.Address}}<br>
+        <strong>Region:</strong> {{.Delivery.Region}}<br>
+        <strong>Email:</strong> {{.Delivery.Email}}<br>
+
+        <h2>Payment</h2>
+        <strong>Transaction:</strong> {{.Payment.Transaction}}<br>
+        <strong>Request ID:</strong> {{.Payment.RequestID}}<br>
+        <strong>Currency:</strong> {{.Payment.Currency}}<br>
+        <strong>Provider:</strong> {{.Payment.Provider}}<br>
+        <strong>Amount:</strong> {{.Payment.Amount}}<br>
+        <strong>Payment DT:</strong> {{.Payment.PaymentDT}}<br>
+        <strong>Bank:</strong> {{.Payment.Bank}}<br>
+        <strong>Delivery Cost:</strong> {{.Payment.DeliveryCost}}<br>
+        <strong>Goods Total:</strong> {{.Payment.GoodsTotal}}<br>
+        <strong>Custom Fee:</strong> {{.Payment.CustomFee}}<br>
+
+        <h2>Items</h2>
+        {{range .Items}}
+            <div>
+                <strong>Chart ID:</strong> {{.ChrtID}}<br>
+                <strong>Track Number:</strong> {{.TrackNumber}}<br>
+                <strong>Price:</strong> {{.Price}}<br>
+                <strong>RID:</strong> {{.RID}}<br>
+                <strong>Name:</strong> {{.Name}}<br>
+                <strong>Sale:</strong> {{.Sale}}<br>
+                <strong>Size:</strong> {{.Size}}<br>
+                <strong>Total Price:</strong> {{.TotalPrice}}<br>
+                <strong>NmID:</strong> {{.NmID}}<br>
+                <strong>Brand:</strong> {{.Brand}}<br>
+                <strong>Status:</strong> {{.Status}}<br>
+            </div>
+        {{end}}
+    </div>
+</body>
+</html>

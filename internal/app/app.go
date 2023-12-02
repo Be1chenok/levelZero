@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Be1chenok/levelZero/internal/brocker"
 	"github.com/Be1chenok/levelZero/internal/config"
 	appHandler "github.com/Be1chenok/levelZero/internal/delivery/http/handler"
 	appServer "github.com/Be1chenok/levelZero/internal/delivery/http/server"
@@ -26,13 +27,22 @@ func Run() {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
-	repository := appRepository.New(postgres)
+	brocker, err := brocker.New(conf)
+	if err != nil {
+		log.Fatalf("failed to connect nats-streaming server: %v", err)
+	}
+
+	repository := appRepository.New(conf, postgres, brocker)
 	service := appService.New(repository)
 	handler := appHandler.New(conf, service)
 	server := appServer.New(conf, handler.InitRoutes())
 
 	if err := service.LoadToCache(); err != nil {
 		log.Fatalf("failed to load cache: %v", err)
+	}
+
+	if err := service.SubscribeToChannel(); err != nil {
+		log.Fatalf("subscriber: %v", err)
 	}
 
 	go func() {
@@ -48,6 +58,14 @@ func Run() {
 	<-quit
 
 	log.Print("shuthing down")
+
+	if err := service.UnSubscribeToChannel(); err != nil {
+		log.Fatalf("subscriber: %v", err)
+	}
+
+	if err := brocker.Close(); err != nil {
+		log.Fatalf("failed to close nats-streaming server connection: %v", err)
+	}
 
 	if err := server.Shuthdown(context.Background()); err != nil {
 		log.Fatalf("failed to shut down server: %v", err)
