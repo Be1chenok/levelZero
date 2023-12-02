@@ -16,7 +16,7 @@ func (h Handler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) HomePage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("../../web/home.html")
+	tmpl, err := template.ParseFiles("../../web/template/home.html")
 	if err != nil {
 		writeJsonErrorResponse(w, http.StatusInternalServerError, SomethingWentWrong)
 		return
@@ -47,7 +47,7 @@ func (h Handler) FindOrderByUID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("../../web/order.html")
+	tmpl, err := template.ParseFiles("../../web/template/order.html")
 	if err != nil {
 		writeJsonErrorResponse(w, http.StatusInternalServerError, SomethingWentWrong)
 		return
@@ -62,7 +62,7 @@ func (h Handler) FindOrderByUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) NothingFound(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("../../web/nothingFound.html")
+	tmpl, err := template.ParseFiles("../../web/template/nothingFound.html")
 	if err != nil {
 		writeJsonErrorResponse(w, http.StatusInternalServerError, SomethingWentWrong)
 		return
