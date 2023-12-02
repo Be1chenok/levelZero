@@ -142,21 +142,21 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 	}
 	defer stmt.Close()
 
-	for id := range order.Items {
+	for _, item := range order.Items {
 		if _, err := stmt.ExecContext(
 			ctx,
 			order.UID,
-			order.Items[id].ChrtID,
-			order.Items[id].TrackNumber,
-			order.Items[id].Price,
-			order.Items[id].RID,
-			order.Items[id].Name,
-			order.Items[id].Sale,
-			order.Items[id].Size,
-			order.Items[id].TotalPrice,
-			order.Items[id].NmID,
-			order.Items[id].Brand,
-			order.Items[id].Status,
+			item.ChrtID,
+			item.TrackNumber,
+			item.Price,
+			item.RID,
+			item.Name,
+			item.Sale,
+			item.Size,
+			item.TotalPrice,
+			item.NmID,
+			item.Brand,
+			item.Status,
 		); err != nil {
 			return fmt.Errorf("failed to insert data into items table: %w", err)
 		}
@@ -216,24 +216,24 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 		return nil, fmt.Errorf("failed to iterating over rows: %w", err)
 	}
 
-	for i := range orders {
-		delivery, err := o.FindDeliveryByOrderUID(context.Background(), orders[i].UID)
+	for _, order := range orders {
+		delivery, err := o.FindDeliveryByOrderUID(context.Background(), order.UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find delivery by orderUID: %w", err)
 		}
-		orders[i].Delivery = delivery
+		order.Delivery = delivery
 
-		payment, err := o.FindPaymentByOrderUID(context.Background(), orders[i].UID)
+		payment, err := o.FindPaymentByOrderUID(context.Background(), order.UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find payment by orderUID: %w", err)
 		}
-		orders[i].Payment = payment
+		order.Payment = payment
 
-		items, err := o.FindItemsByOrderUID(context.Background(), orders[i].UID)
+		items, err := o.FindItemsByOrderUID(context.Background(), order.UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find items by orderUID: %w", err)
 		}
-		orders[i].Items = items
+		order.Items = items
 	}
 
 	return orders, nil

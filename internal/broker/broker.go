@@ -1,4 +1,4 @@
-package brocker
+package broker
 
 import (
 	"github.com/Be1chenok/levelZero/internal/config"

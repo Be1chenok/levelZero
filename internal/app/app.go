@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Be1chenok/levelZero/internal/brocker"
+	"github.com/Be1chenok/levelZero/internal/broker"
 	"github.com/Be1chenok/levelZero/internal/config"
 	appHandler "github.com/Be1chenok/levelZero/internal/delivery/http/handler"
 	appServer "github.com/Be1chenok/levelZero/internal/delivery/http/server"
@@ -40,12 +40,12 @@ func Run() {
 		appLog.Fatalf("failed to connect database: %v", err)
 	}
 
-	brocker, err := brocker.New(conf)
+	broker, err := broker.New(conf)
 	if err != nil {
 		appLog.Fatalf("failed to connect nats-streaming server: %v", err)
 	}
 
-	repository := appRepository.New(conf, logger, postgres, brocker)
+	repository := appRepository.New(conf, logger, postgres, broker)
 	service := appService.New(repository, logger)
 	handler := appHandler.New(conf, service)
 	server := appServer.New(conf, handler.InitRoutes())
@@ -76,7 +76,7 @@ func Run() {
 		appLog.Fatalf("subscriber: %v", err)
 	}
 
-	if err := brocker.Close(); err != nil {
+	if err := broker.Close(); err != nil {
 		appLog.Fatalf("failed to close nats-streaming server connection: %v", err)
 	}
 

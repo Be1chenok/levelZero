@@ -20,21 +20,21 @@ type Subscriber interface {
 }
 
 type subscriber struct {
-	conf   *config.Config
-	logger appLogger.Logger
-	sub    stan.Subscription
-	sc     stan.Conn
-	db     postgres.Order
-	cache  cache.Cache
+	conf          *config.Config
+	logger        appLogger.Logger
+	sub           stan.Subscription
+	sc            stan.Conn
+	postgresOrder postgres.Order
+	cache         cache.Cache
 }
 
-func New(conf *config.Config, logger appLogger.Logger, sc stan.Conn, db postgres.Order, cache cache.Cache) Subscriber {
+func New(conf *config.Config, logger appLogger.Logger, sc stan.Conn, postgresOrder postgres.Order, cache cache.Cache) Subscriber {
 	return &subscriber{
-		conf:   conf,
-		sc:     sc,
-		db:     db,
-		cache:  cache,
-		logger: logger.With(zap.String("component", "subscriber")),
+		conf:          conf,
+		sc:            sc,
+		postgresOrder: postgresOrder,
+		cache:         cache,
+		logger:        logger.With(zap.String("component", "subscriber")),
 	}
 }
 
@@ -78,7 +78,7 @@ func (s subscriber) messageHandler(data []byte) error {
 		return fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
-	if err := s.db.AddOrder(context.Background(), receivedOrder); err != nil {
+	if err := s.postgresOrder.AddOrder(context.Background(), receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in data base: %w", err)
 	}
 	s.logger.Infof("order has been added to database: %s", receivedOrder.UID)
