@@ -1,7 +1,7 @@
 package domain
 
 type Order struct {
-	OrderUID          string   `json:"order_uid"`
+	UID               string   `json:"order_uid"`
 	TrackNumber       string   `json:"track_number"`
 	Entry             string   `json:"entry"`
 	Delivery          Delivery `json:"delivery"`

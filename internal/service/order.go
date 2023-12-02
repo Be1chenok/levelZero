@@ -57,13 +57,16 @@ func (o order) LoadToCache() error {
 		return fmt.Errorf("failed to find all orders: %w", err)
 	}
 	if len(orders) != 0 {
+		o.logger.Infof("loading cache")
 		for i := range orders {
-			if err := o.cacheOrder.Set(orders[i].OrderUID, orders[i]); err != nil {
+			if err := o.cacheOrder.Set(orders[i].UID, orders[i]); err != nil {
 				return fmt.Errorf("filed to set data: %w", err)
 			}
 		}
+		o.logger.Infof("loaded to cache %v orders", len(orders))
+		return nil
 	}
-	o.logger.Infof("load to cache %v orders", len(orders))
+	o.logger.Info("empty database")
 
 	return nil
 }
@@ -97,6 +100,12 @@ func (o order) FindByUID(ctx context.Context, orderUID string) (domain.Order, er
 	order.Delivery = delivery
 	order.Payment = payment
 	order.Items = items
+
+	if err := o.cacheOrder.Set(order.UID, order); err != nil {
+		o.logger.Infof("failed to add order %s to cache: %v", order.UID, err)
+	}
+
+	o.logger.Infof("order %s added to cache", order.UID)
 
 	return order, nil
 }

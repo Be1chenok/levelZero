@@ -15,6 +15,7 @@ import (
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
 	appService "github.com/Be1chenok/levelZero/internal/service"
 	appLogger "github.com/Be1chenok/levelZero/logger"
+	"go.uber.org/zap"
 )
 
 func Run() {
@@ -27,20 +28,21 @@ func Run() {
 			logger.Fatalf("failed to sync logger: %v", err)
 		}
 	}()
+	appLog := logger.With(zap.String("component", "app"))
 
 	conf, err := config.Init()
 	if err != nil {
-		logger.Fatalf("failed to init config: %v", err)
+		appLog.Fatalf("failed to init config: %v", err)
 	}
 
 	postgres, err := postgres.New(conf)
 	if err != nil {
-		logger.Fatalf("failed to connect database: %v", err)
+		appLog.Fatalf("failed to connect database: %v", err)
 	}
 
 	brocker, err := brocker.New(conf)
 	if err != nil {
-		logger.Fatalf("failed to connect nats-streaming server: %v", err)
+		appLog.Fatalf("failed to connect nats-streaming server: %v", err)
 	}
 
 	repository := appRepository.New(conf, logger, postgres, brocker)
@@ -49,40 +51,40 @@ func Run() {
 	server := appServer.New(conf, handler.InitRoutes())
 
 	if err := service.LoadToCache(); err != nil {
-		logger.Fatalf("failed to load cache: %v", err)
+		appLog.Fatalf("failed to load cache: %v", err)
 	}
 
 	if err := service.SubscribeToChannel(); err != nil {
-		logger.Fatalf("subscriber: %v", err)
+		appLog.Fatalf("subscriber: %v", err)
 	}
 
 	go func() {
 		if err := server.Start(); err != nil {
-			logger.Fatalf("failed to start server: %v", err)
+			appLog.Fatalf("failed to start server: %v", err)
 		}
 	}()
 
-	logger.Infof("server is running on port %v", conf.Server.Port)
+	appLog.Infof("server is running on port %v", conf.Server.Port)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	<-quit
 
-	logger.Info("shuthing down")
+	appLog.Info("shuthing down")
 
 	if err := service.UnSubscribeToChannel(); err != nil {
-		logger.Fatalf("subscriber: %v", err)
+		appLog.Fatalf("subscriber: %v", err)
 	}
 
 	if err := brocker.Close(); err != nil {
-		logger.Fatalf("failed to close nats-streaming server connection: %v", err)
+		appLog.Fatalf("failed to close nats-streaming server connection: %v", err)
 	}
 
 	if err := server.Shuthdown(context.Background()); err != nil {
-		logger.Fatalf("failed to shut down server: %v", err)
+		appLog.Fatalf("failed to shut down server: %v", err)
 	}
 
 	if err := postgres.Close(); err != nil {
-		logger.Fatalf("failed to close database connection: %v", err)
+		appLog.Fatalf("failed to close database connection: %v", err)
 	}
 }

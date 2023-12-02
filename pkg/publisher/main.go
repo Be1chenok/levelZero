@@ -48,7 +48,7 @@ type Item struct {
 }
 
 type Order struct {
-	OrderUID          string    `json:"order_uid"`
+	UID               string    `json:"order_uid"`
 	TrackNumber       string    `json:"track_number"`
 	Entry             string    `json:"entry"`
 	Delivery          Delivery  `json:"delivery"`
@@ -96,7 +96,7 @@ func main() {
 
 func GenerateOrder(n int) Order {
 	order := Order{
-		OrderUID:    strconv.Itoa(n),
+		UID:         strconv.Itoa(n),
 		TrackNumber: "WBILMTESTTRACK",
 		Entry:       "WBIL",
 		Delivery: Delivery{

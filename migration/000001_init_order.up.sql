@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS orders(
-    order_uid VARCHAR(64) PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
+    uid VARCHAR(64) UNIQUE,
     track_number VARCHAR(64),
     entry VARCHAR(64),
     locale VARCHAR(6),
@@ -13,7 +14,8 @@ CREATE TABLE IF NOT EXISTS orders(
 );
 
 CREATE TABLE IF NOT EXISTS delivery(
-    order_uid VARCHAR(64) PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
+    order_uid VARCHAR(64) UNIQUE,
     name VARCHAR(64),
     phone VARCHAR(16),
     zip VARCHAR(255),
@@ -21,11 +23,12 @@ CREATE TABLE IF NOT EXISTS delivery(
     address VARCHAR(255),
     region VARCHAR(255),
     email VARCHAR(255),
-    FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
+    FOREIGN KEY (order_uid) REFERENCES orders (uid)
 );
 
 CREATE TABLE IF NOT EXISTS payment(
-    order_uid VARCHAR(64) PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
+    order_uid VARCHAR(64) UNIQUE,
     transaction VARCHAR(64),
     request_id VARCHAR(64),
     currency VARCHAR(6),
@@ -36,10 +39,11 @@ CREATE TABLE IF NOT EXISTS payment(
     delivery_cost INT,
     goods_total INT,
     custom_fee INT,
-    FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
+    FOREIGN KEY (order_uid) REFERENCES orders (uid)
 );
 
 CREATE TABLE IF NOT EXISTS items (
+    id BIGSERIAL PRIMARY KEY,
     order_uid VARCHAR(64),
     chrt_id INT,
     track_number VARCHAR(64),
@@ -52,5 +56,5 @@ CREATE TABLE IF NOT EXISTS items (
     nm_id INT,
     brand VARCHAR(64),
     status INT,
-    FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
+    FOREIGN KEY (order_uid) REFERENCES orders (uid)
 );

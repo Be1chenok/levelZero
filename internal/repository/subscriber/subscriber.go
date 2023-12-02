@@ -81,12 +81,12 @@ func (s subscriber) messageHandler(data []byte) error {
 	if err := s.db.AddOrder(context.Background(), receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in data base: %w", err)
 	}
-	s.logger.Infof("order has been added to database: %s", receivedOrder.OrderUID)
+	s.logger.Infof("order has been added to database: %s", receivedOrder.UID)
 
-	if err := s.cache.Set(receivedOrder.OrderUID, receivedOrder); err != nil {
+	if err := s.cache.Set(receivedOrder.UID, receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in cache :%w", err)
 	}
-	s.logger.Infof("order has been added to cache: %s", receivedOrder.OrderUID)
+	s.logger.Infof("order has been added to cache: %s", receivedOrder.UID)
 
 	return nil
 }

@@ -37,7 +37,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 	if _, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO orders (
-		order_uid,
+		uid,
 		track_number,
 		entry,
 		locale,
@@ -49,7 +49,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		date_created,
 		oof_shard
 		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		order.OrderUID,
+		order.UID,
 		order.TrackNumber,
 		order.Entry,
 		order.Locale,
@@ -77,7 +77,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		region,
 		email
 		) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		order.OrderUID,
+		order.UID,
 		order.Delivery.Name,
 		order.Delivery.Phone,
 		order.Delivery.Zip,
@@ -105,7 +105,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		goods_total,
 		custom_fee
 		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		order.OrderUID,
+		order.UID,
 		order.Payment.Transaction,
 		order.Payment.RequestID,
 		order.Payment.Currency,
@@ -145,7 +145,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 	for id := range order.Items {
 		if _, err := stmt.ExecContext(
 			ctx,
-			order.OrderUID,
+			order.UID,
 			order.Items[id].ChrtID,
 			order.Items[id].TrackNumber,
 			order.Items[id].Price,
@@ -173,7 +173,7 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 	var orders []domain.Order
 	rows, err := o.db.Query(
 		`SELECT
-		order_uid,
+		uid,
 		track_number,
 		entry,
 		locale,
@@ -184,7 +184,8 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 		sm_id,
 		date_created,
 		oof_shard
-		FROM orders`)
+		FROM orders
+		ORDER BY id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query rows: %w", err)
 	}
@@ -194,7 +195,7 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 	for rows.Next() {
 		var order domain.Order
 		if err := rows.Scan(
-			&order.OrderUID,
+			&order.UID,
 			&order.TrackNumber,
 			&order.Entry,
 			&order.Locale,
@@ -216,19 +217,19 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 	}
 
 	for i := range orders {
-		delivery, err := o.FindDeliveryByOrderUID(context.Background(), orders[i].OrderUID)
+		delivery, err := o.FindDeliveryByOrderUID(context.Background(), orders[i].UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find delivery by orderUID: %w", err)
 		}
 		orders[i].Delivery = delivery
 
-		payment, err := o.FindPaymentByOrderUID(context.Background(), orders[i].OrderUID)
+		payment, err := o.FindPaymentByOrderUID(context.Background(), orders[i].UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find payment by orderUID: %w", err)
 		}
 		orders[i].Payment = payment
 
-		items, err := o.FindItemsByOrderUID(context.Background(), orders[i].OrderUID)
+		items, err := o.FindItemsByOrderUID(context.Background(), orders[i].UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find items by orderUID: %w", err)
 		}
@@ -244,7 +245,7 @@ func (o order) FindOrderByUID(ctx context.Context, orderUID string) (domain.Orde
 	if err := o.db.QueryRowContext(
 		ctx,
 		`SELECT
-		order_uid,
+		uid,
 		track_number,
 		entry,
 		locale,
@@ -256,9 +257,9 @@ func (o order) FindOrderByUID(ctx context.Context, orderUID string) (domain.Orde
 		date_created,
 		oof_shard
 		FROM orders
-		WHERE order_uid=$1`,
+		WHERE uid=$1`,
 		orderUID).Scan(
-		&order.OrderUID,
+		&order.UID,
 		&order.TrackNumber,
 		&order.Entry,
 		&order.Locale,
@@ -359,7 +360,8 @@ func (o order) FindItemsByOrderUID(ctx context.Context, orderUID string) ([]doma
 		brand,
 		status
 		FROM items
-		WHERE order_uid=$1`,
+		WHERE order_uid=$1
+		ORDER BY id ASC`,
 		orderUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query rows: %w", err)
