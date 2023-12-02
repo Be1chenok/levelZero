@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS payment(
 );
 
 CREATE TABLE IF NOT EXISTS items (
-    chrt_id INT PRIMARY KEY,
+    order_uid VARCHAR(64),
+    chrt_id INT,
     track_number VARCHAR(64),
     price INT,
     rid VARCHAR(64),
@@ -51,6 +52,5 @@ CREATE TABLE IF NOT EXISTS items (
     nm_id INT,
     brand VARCHAR(64),
     status INT,
-    order_uid VARCHAR(64),
     FOREIGN KEY (order_uid) REFERENCES orders (order_uid)
 );

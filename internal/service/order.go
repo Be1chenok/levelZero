@@ -8,6 +8,8 @@ import (
 	"github.com/Be1chenok/levelZero/internal/repository/cache"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
 	"github.com/Be1chenok/levelZero/internal/repository/subscriber"
+	appLogger "github.com/Be1chenok/levelZero/logger"
+	"go.uber.org/zap"
 )
 
 type Order interface {
@@ -21,13 +23,15 @@ type order struct {
 	postgresOrder postgres.Order
 	cacheOrder    cache.Cache
 	subscriber    subscriber.Subscriber
+	logger        appLogger.Logger
 }
 
-func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache, subscriber subscriber.Subscriber) Order {
+func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache, subscriber subscriber.Subscriber, logger appLogger.Logger) Order {
 	return &order{
 		postgresOrder: postgresOrder,
 		cacheOrder:    cacheOrder,
 		subscriber:    subscriber,
+		logger:        logger.With(zap.String("component", "service-order")),
 	}
 }
 
@@ -59,6 +63,7 @@ func (o order) LoadToCache() error {
 			}
 		}
 	}
+	o.logger.Infof("load to cache %v orders", len(orders))
 
 	return nil
 }

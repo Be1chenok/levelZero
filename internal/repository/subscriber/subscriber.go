@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/Be1chenok/levelZero/internal/config"
 	"github.com/Be1chenok/levelZero/internal/domain"
 	"github.com/Be1chenok/levelZero/internal/repository/cache"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
+	appLogger "github.com/Be1chenok/levelZero/logger"
 	"github.com/nats-io/stan.go"
+	"go.uber.org/zap"
 )
 
 type Subscriber interface {
@@ -19,19 +20,21 @@ type Subscriber interface {
 }
 
 type subscriber struct {
-	conf  *config.Config
-	sub   stan.Subscription
-	sc    stan.Conn
-	db    postgres.Order
-	cache cache.Cache
+	conf   *config.Config
+	logger appLogger.Logger
+	sub    stan.Subscription
+	sc     stan.Conn
+	db     postgres.Order
+	cache  cache.Cache
 }
 
-func New(conf *config.Config, sc stan.Conn, db postgres.Order, cache cache.Cache) Subscriber {
+func New(conf *config.Config, logger appLogger.Logger, sc stan.Conn, db postgres.Order, cache cache.Cache) Subscriber {
 	return &subscriber{
-		conf:  conf,
-		sc:    sc,
-		db:    db,
-		cache: cache,
+		conf:   conf,
+		sc:     sc,
+		db:     db,
+		cache:  cache,
+		logger: logger.With(zap.String("component", "subscriber")),
 	}
 }
 
@@ -39,10 +42,10 @@ func (s *subscriber) Subscribe() error {
 	var err error
 
 	s.sub, err = s.sc.Subscribe(s.conf.Stan.Subject, func(msg *stan.Msg) {
-		log.Println("message received")
+		s.logger.Info("message received")
 		if err := s.messageHandler(msg.Data); err == nil {
 			if err := msg.Ack(); err != nil {
-				log.Printf("failed to acknowledge message: %v\n", err)
+				s.logger.Infof("failed to acknowledge message: %v\n", err)
 			}
 		}
 	},
@@ -53,6 +56,8 @@ func (s *subscriber) Subscribe() error {
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
 	}
+
+	s.logger.Infof("subscribe succesful")
 
 	return nil
 }
@@ -76,12 +81,12 @@ func (s subscriber) messageHandler(data []byte) error {
 	if err := s.db.AddOrder(context.Background(), receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in data base: %w", err)
 	}
-	log.Println("order has been added to database")
+	s.logger.Infof("order has been added to database: %s", receivedOrder.OrderUID)
 
 	if err := s.cache.Set(receivedOrder.OrderUID, receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in cache :%w", err)
 	}
-	log.Println("order has been added to cache")
+	s.logger.Infof("order has been added to cache: %s", receivedOrder.OrderUID)
 
 	return nil
 }

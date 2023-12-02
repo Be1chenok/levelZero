@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/nats-io/stan.go"
@@ -74,9 +75,28 @@ func main() {
 	}
 
 	defer sc.Close()
+	for i := 0; i < 10000; i++ {
+		order := GenerateOrder(i)
 
+		data, err := json.Marshal(order)
+		if err != nil {
+			log.Fatalf("Failed to marshal JSON: %v", err)
+		}
+
+		err = sc.Publish(channel, []byte(data))
+		if err != nil {
+			log.Fatalf("Failed to publish message: %v", err)
+		}
+
+		fmt.Println("Message published successfully")
+	}
+
+	time.Sleep(1 * time.Second)
+}
+
+func GenerateOrder(n int) Order {
 	order := Order{
-		OrderUID:    "b563feb7b2b84b6test",
+		OrderUID:    strconv.Itoa(n),
 		TrackNumber: "WBILMTESTTRACK",
 		Entry:       "WBIL",
 		Delivery: Delivery{
@@ -102,7 +122,20 @@ func main() {
 		},
 		Items: []Item{
 			{
-				ChrtID:      9934930,
+				ChrtID:      n,
+				TrackNumber: "WBILMTESTTRACK",
+				Price:       453,
+				RID:         "ab4219087a764ae0btest",
+				Name:        "Mascaras",
+				Sale:        30,
+				Size:        "0",
+				TotalPrice:  317,
+				NmID:        2389212,
+				Brand:       "Vivienne Sabo",
+				Status:      202,
+			},
+			{
+				ChrtID:      n * 100,
 				TrackNumber: "WBILMTESTTRACK",
 				Price:       453,
 				RID:         "ab4219087a764ae0btest",
@@ -125,17 +158,5 @@ func main() {
 		OofShard:          "1",
 	}
 
-	data, err := json.Marshal(order)
-	if err != nil {
-		log.Fatalf("Failed to marshal JSON: %v", err)
-	}
-
-	err = sc.Publish(channel, data)
-	if err != nil {
-		log.Fatalf("Failed to publish message: %v", err)
-	}
-
-	fmt.Println("Message published successfully")
-
-	time.Sleep(1 * time.Second)
+	return order
 }
