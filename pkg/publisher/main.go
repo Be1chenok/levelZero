@@ -69,6 +69,7 @@ const (
 )
 
 func main() {
+	time.Sleep(5 * time.Second)
 
 	sc, err := stan.Connect("levelZero", "publisher", stan.NatsURL(natsURL))
 	if err != nil {
@@ -94,7 +95,7 @@ func main() {
 
 func GenerateOrder(n int) Order {
 	order := Order{
-		UID:         strconv.Itoa(n),
+		UID:         "b563feb7b2b84b6test" + strconv.Itoa(n),
 		TrackNumber: "WBILMTESTTRACK",
 		Entry:       "WBIL",
 		Delivery: Delivery{
@@ -111,8 +112,8 @@ func GenerateOrder(n int) Order {
 			RequestID:    "",
 			Currency:     "USD",
 			Provider:     "wbpay",
-			Amount:       1817,
-			PaymentDT:    1637907727,
+			Amount:       n * 20,
+			PaymentDT:    int64(12 * n),
 			Bank:         "alpha",
 			DeliveryCost: 1500,
 			GoodsTotal:   317,
