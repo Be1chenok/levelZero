@@ -43,3 +43,14 @@ services:
       - ${NATS_CLUSTER_ID}
     networks:
       - levelZero
+  
+  publisher-test:
+      image: golang:alpine3.18
+      working_dir: /bin/pkg/publisher
+      volumes:
+      - .:/bin
+      command: go run main.go
+      depends_on:
+      - server
+      networks:
+      - levelZero

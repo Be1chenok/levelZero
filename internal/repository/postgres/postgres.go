@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -8,8 +9,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func New(conf *config.Config) (*sql.DB, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%v port=%v user=%v password=%v dbname=%v sslmode=%v",
+func New(conf *config.Config, ctx context.Context) (*sql.DB, error) {
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		conf.Postgres.Host,
 		conf.Postgres.Port,
 		conf.Postgres.Username,
@@ -20,7 +21,7 @@ func New(conf *config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

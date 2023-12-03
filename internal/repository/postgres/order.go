@@ -10,7 +10,7 @@ import (
 
 type Order interface {
 	AddOrder(ctx context.Context, order domain.Order) error
-	FindAllOrders() ([]domain.Order, error)
+	FindAllOrders(ctx context.Context) ([]domain.Order, error)
 	FindOrderByUID(ctx context.Context, orderUID string) (domain.Order, error)
 	FindDeliveryByOrderUID(ctx context.Context, orderUID string) (domain.Delivery, error)
 	FindPaymentByOrderUID(ctx context.Context, orderUID string) (domain.Payment, error)
@@ -27,12 +27,38 @@ func NewOrderRepo(db *sql.DB) Order {
 	}
 }
 
-func (o order) AddOrder(ctx context.Context, order domain.Order) error {
+func wrapCommitError(err, e error) error {
+	return fmt.Errorf("commit tx: %w:%w", err, e)
+}
+
+func wrapBeginError(err error) error {
+	return fmt.Errorf("begin tx: %w", err)
+}
+
+func wrapRollbackError(err, e error) error {
+	return fmt.Errorf("rollback tx: %w:%w", err, e)
+}
+
+func (o order) AddOrder(ctx context.Context, order domain.Order) (err error) {
 	tx, err := o.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to open transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil {
+			if e := tx.Rollback(); e != nil {
+				err = wrapRollbackError(err, e)
+
+				return
+			}
+
+			return
+		}
+
+		if e := tx.Commit(); e != nil {
+			err = wrapCommitError(err, e)
+		}
+	}()
 
 	if _, err := tx.ExecContext(
 		ctx,
@@ -61,13 +87,12 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		order.DateCreated,
 		order.OofShard,
 	); err != nil {
-		tx.Rollback()
 		return fmt.Errorf("failed to insert data into orders table: %w", err)
 	}
 
 	if _, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO delivery (
+		`INSERT INTO deliveries (
 		order_uid,
 		name,
 		phone,
@@ -86,13 +111,12 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		order.Delivery.Region,
 		order.Delivery.Email,
 	); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to insert data into delivery table: %w", err)
+		return fmt.Errorf("failed to insert data into deliveries table: %w", err)
 	}
 
 	if _, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO payment (
+		`INSERT INTO payments (
 		order_uid,
 		transaction,
 		request_id,
@@ -117,8 +141,7 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		order.Payment.GoodsTotal,
 		order.Payment.CustomFee,
 	); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to insert data into payment table: %w", err)
+		return fmt.Errorf("failed to insert data into payments table: %w", err)
 	}
 
 	stmt, err := tx.PrepareContext(
@@ -162,16 +185,13 @@ func (o order) AddOrder(ctx context.Context, order domain.Order) error {
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("transaction failed to commit: %w", err)
-	}
-
 	return nil
 }
 
-func (o order) FindAllOrders() ([]domain.Order, error) {
+func (o order) FindAllOrders(ctx context.Context) ([]domain.Order, error) {
 	var orders []domain.Order
-	rows, err := o.db.Query(
+	rows, err := o.db.QueryContext(
+		ctx,
 		`SELECT
 		uid,
 		track_number,
@@ -184,8 +204,7 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 		sm_id,
 		date_created,
 		oof_shard
-		FROM orders
-		ORDER BY id ASC`)
+		FROM orders`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query rows: %w", err)
 	}
@@ -207,7 +226,7 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 			&order.DateCreated,
 			&order.OofShard,
 		); err != nil {
-			return nil, domain.NothingFound
+			return nil, domain.ErrNothingFound
 		}
 		orders = append(orders, order)
 	}
@@ -216,24 +235,25 @@ func (o order) FindAllOrders() ([]domain.Order, error) {
 		return nil, fmt.Errorf("failed to iterating over rows: %w", err)
 	}
 
-	for _, order := range orders {
-		delivery, err := o.FindDeliveryByOrderUID(context.Background(), order.UID)
+	for idx := range orders {
+		delivery, err := o.FindDeliveryByOrderUID(ctx, orders[idx].UID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find delivery by orderUID: %w", err)
+			return nil, fmt.Errorf("failed to find deliveries by orderUID: %w", err)
 		}
-		order.Delivery = delivery
 
-		payment, err := o.FindPaymentByOrderUID(context.Background(), order.UID)
+		payment, err := o.FindPaymentByOrderUID(ctx, orders[idx].UID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find payment by orderUID: %w", err)
+			return nil, fmt.Errorf("failed to find payments by orderUID: %w", err)
 		}
-		order.Payment = payment
 
-		items, err := o.FindItemsByOrderUID(context.Background(), order.UID)
+		items, err := o.FindItemsByOrderUID(ctx, orders[idx].UID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find items by orderUID: %w", err)
 		}
-		order.Items = items
+
+		orders[idx].Delivery = delivery
+		orders[idx].Payment = payment
+		orders[idx].Items = items
 	}
 
 	return orders, nil
@@ -271,7 +291,7 @@ func (o order) FindOrderByUID(ctx context.Context, orderUID string) (domain.Orde
 		&order.DateCreated,
 		&order.OofShard,
 	); err != nil {
-		return domain.Order{}, domain.NothingFound
+		return domain.Order{}, domain.ErrNothingFound
 	}
 
 	return order, nil
@@ -290,7 +310,7 @@ func (o order) FindDeliveryByOrderUID(ctx context.Context, orderUID string) (dom
 		address,
 		region,
 		email
-		FROM delivery
+		FROM deliveries
 		WHERE order_uid=$1`,
 		orderUID).Scan(
 		&delivery.Name,
@@ -301,8 +321,9 @@ func (o order) FindDeliveryByOrderUID(ctx context.Context, orderUID string) (dom
 		&delivery.Region,
 		&delivery.Email,
 	); err != nil {
-		return domain.Delivery{}, domain.NothingFound
+		return domain.Delivery{}, domain.ErrNothingFound
 	}
+
 	return delivery, nil
 }
 
@@ -322,7 +343,7 @@ func (o order) FindPaymentByOrderUID(ctx context.Context, orderUID string) (doma
 		delivery_cost,
 		goods_total,
 		custom_fee
-		FROM payment
+		FROM payments
 		WHERE order_uid=$1`,
 		orderUID).Scan(
 		&payment.Transaction,
@@ -336,7 +357,7 @@ func (o order) FindPaymentByOrderUID(ctx context.Context, orderUID string) (doma
 		&payment.GoodsTotal,
 		&payment.CustomFee,
 	); err != nil {
-		return domain.Payment{}, domain.NothingFound
+		return domain.Payment{}, domain.ErrNothingFound
 	}
 
 	return payment, nil
@@ -383,7 +404,7 @@ func (o order) FindItemsByOrderUID(ctx context.Context, orderUID string) ([]doma
 			&item.NmID,
 			&item.Brand,
 			&item.Status); err != nil {
-			return nil, domain.NothingFound
+			return nil, domain.ErrNothingFound
 		}
 		items = append(items, item)
 	}

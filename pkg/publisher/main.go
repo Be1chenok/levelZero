@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -64,10 +63,12 @@ type Order struct {
 	OofShard          string    `json:"oof_shard"`
 }
 
-func main() {
-	natsURL := "127.0.0.1:4222"
+const (
+	natsURL = "nats-streaming:4222"
+	channel = "levelZeroChannel"
+)
 
-	channel := "levelZeroChannel"
+func main() {
 
 	sc, err := stan.Connect("levelZero", "publisher", stan.NatsURL(natsURL))
 	if err != nil {
@@ -75,7 +76,7 @@ func main() {
 	}
 
 	defer sc.Close()
-	for i := 0; i < 10000; i++ {
+	for i := 1; i < 20; i++ {
 		order := GenerateOrder(i)
 
 		data, err := json.Marshal(order)
@@ -83,15 +84,12 @@ func main() {
 			log.Fatalf("Failed to marshal JSON: %v", err)
 		}
 
-		err = sc.Publish(channel, []byte(data))
-		if err != nil {
+		if err = sc.Publish(channel, []byte(data)); err != nil {
 			log.Fatalf("Failed to publish message: %v", err)
 		}
 
-		fmt.Println("Message published successfully")
+		log.Println("Message published successfully")
 	}
-
-	time.Sleep(1 * time.Second)
 }
 
 func GenerateOrder(n int) Order {

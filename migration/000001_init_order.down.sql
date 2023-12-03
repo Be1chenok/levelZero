@@ -1,7 +1,11 @@
+DROP INDEX IF EXISTS idx_deliveries;
+DROP INDEX IF EXISTS idx_payments;
+DROP INDEX IF EXISTS idx_items;
+
 DROP TABLE IF EXISTS items;
 
-DROP TABLE IF EXISTS payment;
+DROP TABLE IF EXISTS payments;
 
-DROP TABLE IF EXISTS delivery;
+DROP TABLE IF EXISTS deliveries;
 
 DROP TABLE IF EXISTS orders;

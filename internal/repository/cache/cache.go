@@ -1,47 +1,78 @@
 package cache
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/Be1chenok/levelZero/internal/domain"
+	"github.com/Be1chenok/levelZero/internal/repository/postgres"
+	appLogger "github.com/Be1chenok/levelZero/logger"
+	"go.uber.org/zap"
 )
 
+var ErrAlreadyExists = errors.New("already exixts")
+
 type Cache interface {
-	Get(key string) (domain.Order, bool)
-	Set(key string, value domain.Order) error
+	LoadToCache(ctx context.Context) error
+	Get(key string) (interface{}, bool)
+	Set(key string, value interface{}) error
 }
 
 type cache struct {
-	mutex sync.RWMutex
-	data  map[string]domain.Order
+	logger        appLogger.Logger
+	postgresOrder postgres.Order
+	mutex         sync.RWMutex
+	data          map[string]interface{}
 }
 
-func New() Cache {
+func New(postgresOrder postgres.Order, logger appLogger.Logger) Cache {
 	return &cache{
-		data: make(map[string]domain.Order),
+		data:          make(map[string]interface{}),
+		postgresOrder: postgresOrder,
+		logger:        logger.With(zap.String("component", "cache")),
 	}
 }
 
-func (c *cache) Get(key string) (domain.Order, bool) {
+func (c *cache) Get(key string) (interface{}, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	value, ok := c.data[key]
 	if !ok {
-		return value, false
+		return nil, false
 	}
 
 	return value, true
 }
 
-func (c *cache) Set(key string, value domain.Order) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
+func (c *cache) Set(key string, value interface{}) error {
+	c.mutex.RLock()
 	if _, ok := c.data[key]; ok == true {
-		return fmt.Errorf("already exixts")
+		return ErrAlreadyExists
+	}
+	c.mutex.RUnlock()
+
+	c.mutex.Lock()
+	c.data[key] = value
+	c.mutex.Unlock()
+
+	return nil
+}
+
+func (c *cache) LoadToCache(ctx context.Context) error {
+	orders, err := c.postgresOrder.FindAllOrders(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to find all orders: %w", err)
 	}
 
-	c.data[key] = value
+	c.logger.Info("loading cache")
+
+	for _, order := range orders {
+		if err := c.Set(order.UID, order); err != nil {
+			return fmt.Errorf("filed to set data: %w", err)
+		}
+	}
+	c.logger.Infof("loaded to cache %v orders", len(orders))
+
 	return nil
 }

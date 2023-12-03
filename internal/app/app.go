@@ -5,13 +5,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
-	"github.com/Be1chenok/levelZero/internal/broker"
 	"github.com/Be1chenok/levelZero/internal/config"
 	appHandler "github.com/Be1chenok/levelZero/internal/delivery/http/handler"
 	appServer "github.com/Be1chenok/levelZero/internal/delivery/http/server"
 	appRepository "github.com/Be1chenok/levelZero/internal/repository"
+	appBroker "github.com/Be1chenok/levelZero/internal/repository/broker"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
 	appService "github.com/Be1chenok/levelZero/internal/service"
 	appLogger "github.com/Be1chenok/levelZero/logger"
@@ -35,12 +37,13 @@ func Run() {
 		appLog.Fatalf("failed to init config: %v", err)
 	}
 
-	postgres, err := postgres.New(conf)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	postgres, err := postgres.New(conf, ctx)
 	if err != nil {
 		appLog.Fatalf("failed to connect database: %v", err)
 	}
 
-	broker, err := broker.New(conf)
+	broker, err := appBroker.New(conf)
 	if err != nil {
 		appLog.Fatalf("failed to connect nats-streaming server: %v", err)
 	}
@@ -50,12 +53,16 @@ func Run() {
 	handler := appHandler.New(conf, service)
 	server := appServer.New(conf, handler.InitRoutes())
 
-	if err := service.LoadToCache(); err != nil {
-		appLog.Fatalf("failed to load cache: %v", err)
+	if err := repository.CacheOrder.LoadToCache(ctx); err != nil {
+		log.Fatalf("failed to load cache: %v", err)
 	}
+	cancel()
 
-	if err := service.SubscribeToChannel(); err != nil {
-		appLog.Fatalf("subscriber: %v", err)
+	wg := sync.WaitGroup{}
+	ctx, cancel = context.WithCancel(context.Background())
+
+	if err := repository.Broker.Subscribe(&wg, ctx); err != nil {
+		appLog.Fatalf("failed to subscribe to channel")
 	}
 
 	go func() {
@@ -69,11 +76,13 @@ func Run() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	<-quit
+	cancel()
+	wg.Wait()
 
 	appLog.Info("shuthing down")
 
-	if err := service.UnSubscribeToChannel(); err != nil {
-		appLog.Fatalf("subscriber: %v", err)
+	if err := repository.Broker.UnSubscribe(); err != nil {
+		appLog.Fatalf("failed to unsubscribe channel: %v", err)
 	}
 
 	if err := broker.Close(); err != nil {

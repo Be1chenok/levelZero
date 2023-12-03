@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Be1chenok/levelZero/internal/config"
@@ -15,7 +16,7 @@ type Server struct {
 func New(conf *config.Config, handler http.Handler) *Server {
 	return &Server{
 		httpServer: http.Server{
-			Addr:           conf.Server.Host + ":" + conf.Server.Port,
+			Addr:           conf.Server.Host + ":" + strconv.Itoa(conf.Server.Port),
 			MaxHeaderBytes: 1024 * 1024, // 1 MB
 			ReadTimeout:    10 * time.Second,
 			WriteTimeout:   10 * time.Second,

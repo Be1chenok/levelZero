@@ -7,29 +7,29 @@ import (
 )
 
 type Config struct {
-	Server   serverConfig
-	Postgres postgresConfig
-	Stan     stanConfig
+	Server   ServerConfig
+	Postgres PostgresConfig
+	Stan     StanConfig
 }
 
-type serverConfig struct {
+type ServerConfig struct {
 	Host        string
-	Port        string
+	Port        int
 	RequestTime time.Duration
 }
 
-type postgresConfig struct {
+type PostgresConfig struct {
 	Host     string
-	Port     string
+	Port     int
 	Username string
 	Password string
 	DBName   string
 	SSLMode  string
 }
 
-type stanConfig struct {
+type StanConfig struct {
 	Host        string
-	Port        string
+	Port        int
 	ClusterID   string
 	ClientID    string
 	Subject     string
@@ -45,22 +45,22 @@ func Init() (*Config, error) {
 	}
 
 	return &Config{
-			serverConfig{
+			ServerConfig{
 				Host:        viper.GetString("SERVER_HOST"),
-				Port:        viper.GetString("SERVER_PORT"),
+				Port:        viper.GetInt("SERVER_PORT"),
 				RequestTime: viper.GetDuration("REQUEST_TIME") * time.Second,
 			},
-			postgresConfig{
+			PostgresConfig{
 				Host:     viper.GetString("PG_HOST"),
-				Port:     viper.GetString("PG_PORT"),
+				Port:     viper.GetInt("PG_PORT"),
 				Username: viper.GetString("PG_USER"),
 				Password: viper.GetString("PG_PASS"),
 				DBName:   viper.GetString("PG_BASE"),
 				SSLMode:  viper.GetString("PG_SSL_MODE"),
 			},
-			stanConfig{
+			StanConfig{
 				Host:        viper.GetString("NATS_HOST"),
-				Port:        viper.GetString("NATS_PORT"),
+				Port:        viper.GetInt("NATS_PORT"),
 				ClusterID:   viper.GetString("NATS_CLUSTER_ID"),
 				ClientID:    viper.GetString("NATS_CLIENT_ID"),
 				Subject:     viper.GetString("NATS_SUBJECT"),

@@ -11,6 +11,6 @@ type Service struct {
 
 func New(repo *repository.Repository, logger appLogger.Logger) *Service {
 	return &Service{
-		Order: NewOrder(repo.PostgresOrder, repo.CacheOrder, repo.Subscriber, logger),
+		Order: NewOrder(repo.PostgresOrder, repo.CacheOrder, logger),
 	}
 }

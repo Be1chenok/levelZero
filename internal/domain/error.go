@@ -3,5 +3,5 @@ package domain
 import "errors"
 
 var (
-	NothingFound = errors.New("nothing found")
+	ErrNothingFound = errors.New("nothing found")
 )

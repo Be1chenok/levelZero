@@ -7,74 +7,36 @@ import (
 	"github.com/Be1chenok/levelZero/internal/domain"
 	"github.com/Be1chenok/levelZero/internal/repository/cache"
 	"github.com/Be1chenok/levelZero/internal/repository/postgres"
-	"github.com/Be1chenok/levelZero/internal/repository/subscriber"
 	appLogger "github.com/Be1chenok/levelZero/logger"
 	"go.uber.org/zap"
 )
 
 type Order interface {
 	FindByUID(ctx context.Context, orderUID string) (domain.Order, error)
-	UnSubscribeToChannel() error
-	SubscribeToChannel() error
-	LoadToCache() error
 }
 
 type order struct {
 	postgresOrder postgres.Order
 	cacheOrder    cache.Cache
-	subscriber    subscriber.Subscriber
 	logger        appLogger.Logger
 }
 
-func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache, subscriber subscriber.Subscriber, logger appLogger.Logger) Order {
+func NewOrder(postgresOrder postgres.Order, cacheOrder cache.Cache, logger appLogger.Logger) Order {
 	return &order{
 		postgresOrder: postgresOrder,
 		cacheOrder:    cacheOrder,
-		subscriber:    subscriber,
 		logger:        logger.With(zap.String("component", "service-order")),
 	}
 }
 
-func (o order) SubscribeToChannel() error {
-	if err := o.subscriber.Subscribe(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (o order) UnSubscribeToChannel() error {
-	if err := o.subscriber.UnSubscribe(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (o order) LoadToCache() error {
-	orders, err := o.postgresOrder.FindAllOrders()
-	if err != nil {
-		return fmt.Errorf("failed to find all orders: %w", err)
-	}
-	if len(orders) != 0 {
-		o.logger.Infof("loading cache")
-		for i := range orders {
-			if err := o.cacheOrder.Set(orders[i].UID, orders[i]); err != nil {
-				return fmt.Errorf("filed to set data: %w", err)
-			}
-		}
-		o.logger.Infof("loaded to cache %v orders", len(orders))
-		return nil
-	}
-	o.logger.Info("empty database")
-
-	return nil
-}
-
 func (o order) FindByUID(ctx context.Context, orderUID string) (domain.Order, error) {
-	order, ok := o.cacheOrder.Get(orderUID)
+	cachedOrder, ok := o.cacheOrder.Get(orderUID)
 	if ok {
-		return order, nil
+		arr, ok := cachedOrder.(domain.Order)
+		if !ok {
+			o.logger.Error("failed to convert data")
+		}
+		return arr, nil
 	}
 
 	order, err := o.postgresOrder.FindOrderByUID(ctx, orderUID)
@@ -102,7 +64,7 @@ func (o order) FindByUID(ctx context.Context, orderUID string) (domain.Order, er
 	order.Items = items
 
 	if err := o.cacheOrder.Set(order.UID, order); err != nil {
-		o.logger.Infof("failed to add order %s to cache: %v", order.UID, err)
+		o.logger.Errorf("failed to add order %s to cache: %v", order.UID, err)
 	}
 
 	o.logger.Infof("order %s added to cache", order.UID)

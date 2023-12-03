@@ -1,9 +1,10 @@
-package subscriber
+package broker
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/Be1chenok/levelZero/internal/config"
 	"github.com/Be1chenok/levelZero/internal/domain"
@@ -15,7 +16,7 @@ import (
 )
 
 type Subscriber interface {
-	Subscribe() error
+	Subscribe(wg *sync.WaitGroup, ctx context.Context) error
 	UnSubscribe() error
 }
 
@@ -28,7 +29,7 @@ type subscriber struct {
 	cache         cache.Cache
 }
 
-func New(conf *config.Config, logger appLogger.Logger, sc stan.Conn, postgresOrder postgres.Order, cache cache.Cache) Subscriber {
+func NewSubscriber(conf *config.Config, logger appLogger.Logger, sc stan.Conn, postgresOrder postgres.Order, cache cache.Cache) Subscriber {
 	return &subscriber{
 		conf:          conf,
 		sc:            sc,
@@ -38,12 +39,20 @@ func New(conf *config.Config, logger appLogger.Logger, sc stan.Conn, postgresOrd
 	}
 }
 
-func (s *subscriber) Subscribe() error {
+func (s *subscriber) Subscribe(wg *sync.WaitGroup, ctx context.Context) error {
 	var err error
-
 	s.sub, err = s.sc.Subscribe(s.conf.Stan.Subject, func(msg *stan.Msg) {
-		s.logger.Info("message received")
-		if err := s.messageHandler(msg.Data); err == nil {
+		wg.Add(1)
+		defer wg.Done()
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			s.logger.Info("message received")
+			if err := s.messageHandler(msg.Data, ctx); err != nil {
+				s.logger.Errorf("failed to handle message: %v", err)
+			}
 			if err := msg.Ack(); err != nil {
 				s.logger.Infof("failed to acknowledge message: %v\n", err)
 			}
@@ -72,13 +81,13 @@ func (s *subscriber) UnSubscribe() error {
 	return nil
 }
 
-func (s subscriber) messageHandler(data []byte) error {
+func (s subscriber) messageHandler(data []byte, ctx context.Context) error {
 	var receivedOrder domain.Order
 	if err := json.Unmarshal(data, &receivedOrder); err != nil {
 		return fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
-	if err := s.postgresOrder.AddOrder(context.Background(), receivedOrder); err != nil {
+	if err := s.postgresOrder.AddOrder(ctx, receivedOrder); err != nil {
 		return fmt.Errorf("failed to add order in data base: %w", err)
 	}
 	s.logger.Infof("order has been added to database: %s", receivedOrder.UID)
